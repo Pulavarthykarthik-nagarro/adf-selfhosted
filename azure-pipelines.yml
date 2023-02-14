@@ -18,6 +18,7 @@ variables:
 
   
 pool:
+  name: 'demoagent'
   vmImage: 'daaagent'
 
 
