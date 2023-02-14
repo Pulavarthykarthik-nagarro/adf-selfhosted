@@ -1,0 +1,9 @@
+{
+	"name": "daa-adf-demo",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "d87a4e1c-52df-48d0-ab03-cfd375eef636",
+		"tenantId": "a45fe71a-f480-4e42-ad5e-aff33165aa35"
+	}
+}
