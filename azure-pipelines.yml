@@ -4,8 +4,6 @@ trigger:
     - develop
     
 
-
-
   paths:
     include:
     - ADFIntegration
@@ -82,9 +80,13 @@ stages:
               artifact: 'datafactory'
               publishLocation: 'pipeline'
           
-          # - powershell: |
-          #     tree "$(System.DefaultWorkingDirectory)" /F
-          #   displayName: 'Treeview of System.DefaultWorkingDirectory'
+          - powershell: |
+              tree "$(System.DefaultWorkingDirectory)" /F
+            displayName: 'Treeview of System.DefaultWorkingDirectory'
+
+          - powershell: |
+              tree "$(build.artifactstagingdirectory)" /F
+            displayName: 'Treeview of build.artifactstagingdirectory'
 
 # # ######################
 # # # ADF Release Pipeline
