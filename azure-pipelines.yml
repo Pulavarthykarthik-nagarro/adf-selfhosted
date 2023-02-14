@@ -1,0 +1,146 @@
+trigger:
+  branches:
+    include:
+    - devops-develop
+    
+
+
+
+  paths:
+    include:
+    - DevOps/ADF/ADFIntegration
+    exclude:
+    - azure-pipelines.yml
+
+variables:
+- group: dep-adf-qa
+
+
+  
+pool:
+  vmImage: 'windows-latest'
+
+
+################
+#ADF BUILD Pipeline
+################
+
+
+stages:
+  - stage: Build_ADF
+    #condition: eq(variables.isDev, true)
+    displayName: Build ADF artifact in Dev
+    jobs:
+      - job: Creating
+        displayName: "Creating Artifact"
+        steps:      
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '14.x'
+            displayName: 'Install Node.js'
+
+          - task: Npm@1
+            inputs:
+              command: 'install'
+              workingDir: '$(Build.Repository.LocalPath)/$(workingDir)' 
+              verbose: true
+            displayName: 'Install npm package'
+
+# Validates all of the Data Factory resources in the repository. You'll get the same validation errors as when "Validate All" is selected.
+# Enter the appropriate subscription and name for the source factory.
+
+          - task: Npm@1
+            inputs:
+              command: 'custom'
+              workingDir: '$(Build.Repository.LocalPath)/$(workingDir)' #package.json folder
+              customCommand: 'run build validate $(Build.Repository.LocalPath)/$(workingDir) /subscriptions/$(subscriptionid)/resourceGroups/$(resourcegroup_dev)/providers/Microsoft.DataFactory/factories/$(adfname_dev)'
+            displayName: 'Validate'
+
+# Validate and then generate the ARM template into the destination folder, which is the same as selecting "Publish" from the UX.
+# The ARM template generated isn't published to the live version of the factory. Deployment should be done by using a CI/CD pipeline. 
+
+          - task: Npm@1
+            inputs:
+              command: 'custom'
+              workingDir: '$(Build.Repository.LocalPath)/$(workingDir)'
+              customCommand: 'run build export $(Build.Repository.LocalPath)/$(workingDir) /subscriptions/$(subscriptionid)/resourceGroups/$(resourcegroup_dev)/providers/Microsoft.DataFactory/factories/$(adfname_dev) artifacts'  
+            displayName: 'Validate and Generate ARM template'
+
+# Publish the artifact to be used as a source for a release pipeline.
+          - task: CopyFiles@2
+            inputs:
+              SourceFolder: '$(Build.Repository.LocalPath)/$(SourceFolder)'
+              Contents: '**'
+              TargetFolder: '$(build.artifactstagingdirectory)/$(TargetFolder)'
+            displayName: 'Copying application artifact'
+
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(build.artifactstagingdirectory)'
+              artifact: 'datafactory'
+              publishLocation: 'pipeline'
+          
+          - powershell: |
+              tree "$(System.DefaultWorkingDirectory)" /F
+            displayName: 'Treeview of System.DefaultWorkingDirectory'
+
+# ######################
+# # ADF Release Pipeline
+# ######################
+
+#QA Release Stage
+  - stage: ADF_QA
+    displayName: Deploying ADF in DEV
+    dependsOn: Build_ADF
+    condition: succeeded('Build_ADF')
+    jobs:
+      - job: DeploytoQA     
+        steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              targetPath: '$(System.ArtifactsDirectory)'
+
+          - powershell: |
+              tree "$(System.ArtifactsDirectory)" /F
+            displayName: 'Treeview of System.ArtifactsDirectory'
+          - task: DownloadSecureFile@1
+            name: adfparameter
+            displayName: 'Download Parameters from secure files'
+            inputs:
+              secureFile: 'ARMTemplateParametersForFactoryqa.json'
+          - powershell: 'echo $(adfparameter.secureFilePath)'           
+
+
+          - pwsh: |
+              Copy-Item -Path '$(adfparameter.secureFilePath)' -Destination '$(System.ArtifactsDirectory)/$(artifactFolder)'
+              Remove-Item ARMTemplateParametersForFactory.json
+              Rename-Item -Path ARMTemplateParametersForFactoryqa.json -NewName ARMTemplateParametersForFactory.json
+            workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+            displayName: Replace ARM Template Parameters
+          - pwsh: |
+              (Get-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json) -Replace '"type": "ManagedIdentity"', '"type": "SystemAssigned"' | Set-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json
+            workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+            displayName: Replace Managed Identity to System Assigned
+  
+
+                 
+          - powershell: |
+              tree "$(System.ArtifactsDirectory)" /F
+            displayName: 'Treeview of System.ArtifactsDirectory'         
+          - task: AzureResourceManagerTemplateDeployment@3
+            displayName: 'Deploying to Dev ADF'
+            inputs:
+              deploymentScope: Resource Group
+              azureResourceManagerConnection: $(myserviceconnection)
+              subscriptionId: $(subscriptionid)
+              action: Create Or Update Resource Group
+              resourceGroupName: $(resourcegroup_QA)
+              location: $(location_QA)
+              templateLocation: Linked artifact
+              csmFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json'
+              csmParametersFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateParametersForFactory.json'
+              deploymentMode: Incremental
+
+
