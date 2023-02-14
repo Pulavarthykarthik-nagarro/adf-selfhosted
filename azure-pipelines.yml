@@ -1,14 +1,15 @@
 trigger:
   branches:
-    include:
+    exclude:
     - develop
     
 
   paths:
-    include:
-    - ADFIntegration
+    # include:
+    # - ADFIntegration
     exclude:
     - azure-pipelines.yml
+    - ADFIntegration
 
 variables:
 - group: daa-adf-self
