@@ -93,57 +93,57 @@ stages:
 # # ######################
 
 #QA Release Stage
-  - stage: ADF_QA
-    displayName: Deploying ADF in DEV
-    dependsOn: Build_ADF
-    condition: succeeded('Build_ADF')
-    jobs:
-      - job: DeploytoQA     
-        steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              buildType: 'current'
-              targetPath: '$(System.ArtifactsDirectory)'
+  # - stage: ADF_QA
+  #   displayName: Deploying ADF in DEV
+  #   dependsOn: Build_ADF
+  #   condition: succeeded('Build_ADF')
+  #   jobs:
+  #     - job: DeploytoQA     
+  #       steps:
+  #         - task: DownloadPipelineArtifact@2
+  #           inputs:
+  #             buildType: 'current'
+  #             targetPath: '$(System.ArtifactsDirectory)'
 
-          - powershell: |
-              tree "$(System.ArtifactsDirectory)" /F
-            displayName: 'Treeview of System.ArtifactsDirectory'
-          - task: DownloadSecureFile@1
-            name: adfparameter
-            displayName: 'Download Parameters from secure files'
-            inputs:
-              secureFile: 'ARMTemplateParametersForFactoryqa.json'
+  #         - powershell: |
+  #             tree "$(System.ArtifactsDirectory)" /F
+  #           displayName: 'Treeview of System.ArtifactsDirectory'
+  #         - task: DownloadSecureFile@1
+  #           name: adfparameter
+  #           displayName: 'Download Parameters from secure files'
+  #           inputs:
+  #             secureFile: 'ARMTemplateParametersForFactoryqa.json'
           
 
 
-          - powershell: |
-              Copy-Item -Path '$(adfparameter.secureFilePath)' -Destination '$(System.ArtifactsDirectory)/$(artifactFolder)'
-              Remove-Item ARMTemplateParametersForFactory.json
-              Rename-Item -Path ARMTemplateParametersForFactoryqa.json -NewName ARMTemplateParametersForFactory.json
-            workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
-            displayName: Replace ARM Template Parameters
-          - powershell: |
-              (Get-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json) -Replace '"type": "ManagedIdentity"', '"type": "SystemAssigned"' | Set-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json
-            workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
-            displayName: Replace Managed Identity to System Assigned
+  #         - powershell: |
+  #             Copy-Item -Path '$(adfparameter.secureFilePath)' -Destination '$(System.ArtifactsDirectory)/$(artifactFolder)'
+  #             Remove-Item ARMTemplateParametersForFactory.json
+  #             Rename-Item -Path ARMTemplateParametersForFactoryqa.json -NewName ARMTemplateParametersForFactory.json
+  #           workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+  #           displayName: Replace ARM Template Parameters
+  #         - powershell: |
+  #             (Get-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json) -Replace '"type": "ManagedIdentity"', '"type": "SystemAssigned"' | Set-Content $(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json
+  #           workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+  #           displayName: Replace Managed Identity to System Assigned
   
 
                  
-          - powershell: |
-              tree "$(System.ArtifactsDirectory)" /F
-            displayName: 'Treeview of System.ArtifactsDirectory'         
-          - task: AzureResourceManagerTemplateDeployment@3
-            displayName: 'Deploying to Dev ADF'
-            inputs:
-              deploymentScope: Resource Group
-              azureResourceManagerConnection: $(myserviceconnection)
-              subscriptionId: $(subscriptionid)
-              action: Create Or Update Resource Group
-              resourceGroupName: $(resourcegroup_QA)
-              location: $(location_QA)
-              templateLocation: Linked artifact
-              csmFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json'
-              csmParametersFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateParametersForFactory.json'
-              deploymentMode: Incremental
+  #         - powershell: |
+  #             tree "$(System.ArtifactsDirectory)" /F
+  #           displayName: 'Treeview of System.ArtifactsDirectory'         
+  #         - task: AzureResourceManagerTemplateDeployment@3
+  #           displayName: 'Deploying to Dev ADF'
+  #           inputs:
+  #             deploymentScope: Resource Group
+  #             azureResourceManagerConnection: $(myserviceconnection)
+  #             subscriptionId: $(subscriptionid)
+  #             action: Create Or Update Resource Group
+  #             resourceGroupName: $(resourcegroup_QA)
+  #             location: $(location_QA)
+  #             templateLocation: Linked artifact
+  #             csmFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json'
+  #             csmParametersFile: '$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateParametersForFactory.json'
+  #             deploymentMode: Incremental
 
 
