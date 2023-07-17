@@ -17,7 +17,7 @@ variables:
 - group: daa-adf-self
 
   
-pool: 'demo'
+pool: demo
 
 
 ################
