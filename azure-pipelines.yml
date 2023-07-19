@@ -127,7 +127,17 @@ stages:
                  
           - powershell: |
               tree "$(System.ArtifactsDirectory)" /F
-            displayName: 'Treeview of System.ArtifactsDirectory'         
+            displayName: 'Treeview of System.ArtifactsDirectory'   
+
+          - task: AzurePowerShell@5
+            displayName: Stop Trigger
+            inputs:
+              pwsh: true 
+              azureSubscription: $(myserviceconnection)
+              workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+              azurePowerShellVersion: 'LatestVersion'
+              ScriptPath: '$(System.ArtifactsDirectory)/$(artifactFolder)/PrePostDeploymentScript.ps1'
+              ScriptArguments: -armTemplate "$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json" -ResourceGroupName $(resourcegroup_QA) -DataFactoryName $(adfname_qa) -predeployment $true -deleteDeployment $false      
           - task: AzureResourceManagerTemplateDeployment@3
             displayName: 'Deploying to Dev ADF'
             inputs:
@@ -143,3 +153,12 @@ stages:
               deploymentMode: Incremental
 
 
+          - task: AzurePowerShell@5
+            displayName: Start Trigger
+            inputs:
+              pwsh: true 
+              azureSubscription: $(myserviceconnection)
+              workingDirectory: $(System.ArtifactsDirectory)/$(artifactFolder)
+              azurePowerShellVersion: 'LatestVersion'
+              ScriptPath: '$(System.ArtifactsDirectory)/$(artifactFolder)/PrePostDeploymentScript.ps1'
+              ScriptArguments: -armTemplate "$(System.ArtifactsDirectory)/$(artifactFolder)/ARMTemplateForFactory.json" -ResourceGroupName $(resourcegroup_QA) -DataFactoryName $(adfname_qa) -predeployment $false -deleteDeployment $true
