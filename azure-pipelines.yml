@@ -17,7 +17,8 @@ variables:
 - group: daa-adf-self
 
   
-pool: default
+pool:
+  vmImage: 'windows-latest'
 
 
 ################
