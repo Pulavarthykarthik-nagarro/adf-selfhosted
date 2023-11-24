@@ -1,0 +1,7 @@
+{
+	"name": "SHIR-ADF-DEV",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "dev Shir"
+	}
+}
